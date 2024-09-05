@@ -6,7 +6,7 @@ config = dotenv_values(".env")
 
 try:
     client = MongoClient(config["ATLAS_URI"])
-    db = client['aqua_alaga']
+    db = client[config["DB_NAME"]]
     print('MongoDB Database connected!')
 except:
     print('MongoDB not connected.')
