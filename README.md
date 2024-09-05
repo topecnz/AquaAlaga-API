@@ -4,6 +4,7 @@
 
 - Python 3.11
 - MongoDB
+- Raspberry Pi Zero 2W
 
 ## Installation
 
