@@ -65,15 +65,14 @@ async def post_schedule(sched: Schedule):
 
 @router.get("/report")
 async def get_report():
-    report = report_serial(report.find())
-    return report
+    reports = report_list_serial(report.find())
+    return reports
 
 
 @router.post("/report")
 async def post_report(rep: Report):
     data = dict(rep)
     data['created_at'] = datetime.now()
-    data['updated_at'] = datetime.now()
     result = report.insert_one(data)
     return {
         "code": 200 if result else 204
