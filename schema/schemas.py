@@ -54,5 +54,8 @@ def report_serial(report) -> dict:
         "created_at": str(report['created_at']),
     }
 
+def report_list_serial(reports) -> list:
+    return [report_serial(report) for report in reports]
+
 def notification_list_serial(reports) -> list:
     return [account_serial(report) for report in reports]
