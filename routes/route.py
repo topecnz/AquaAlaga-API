@@ -61,13 +61,10 @@ async def post_schedule(sched: Schedule):
         "code": 200 if result else 204
     }
 
-
-
 @router.get("/report")
 async def get_report():
     reports = report_list_serial(report.find())
     return reports
-
 
 @router.post("/report")
 async def post_report(rep: Report):
@@ -78,6 +75,16 @@ async def post_report(rep: Report):
         "code": 200 if result else 204
     }
 
+@router.get("/notification") # 1
+async def get_notification():
+    notifications = notification_list_serial(notification.find())
+    return notifications
 
-
-    
+@router.post("/notification") # 2
+async def post_notification(notif: Notification):
+    data = dict(notif)
+    data['created_at'] = datetime.now()
+    result = notification.insert_one(data)
+    return {
+        "code": 200 if result else 204
+    }
