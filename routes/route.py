@@ -75,12 +75,12 @@ async def post_report(rep: Report):
         "code": 200 if result else 204
     }
 
-@router.get("/notification") # 1
+@router.get("/notification") 
 async def get_notification():
     notifications = notification_list_serial(notification.find())
     return notifications
 
-@router.post("/notification") # 2
+@router.post("/notification")
 async def post_notification(notif: Notification):
     data = dict(notif)
     data['created_at'] = datetime.now()
