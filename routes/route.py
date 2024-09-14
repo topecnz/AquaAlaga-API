@@ -84,7 +84,9 @@ async def update_report(rep: Report, _id: str):
     data = dict(rep)
     data["updated_at"] = datetime.now()
     result = report.update_one({"_id": ObjectId(_id)}, {"$set": data})
-    return {"code": 200 if result.modified_count > 0 else 204}
+    return {
+        "code": 200 if result.modified_count > 0 else 204
+    }
 
 
 
