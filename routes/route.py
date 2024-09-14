@@ -9,6 +9,7 @@ from schema.schemas import *
 from bson import ObjectId
 from datetime import datetime
 
+
 router = APIRouter()
 
 @router.get("/account")
@@ -62,7 +63,6 @@ async def post_schedule(sched: Schedule):
     }
 
 
-
 @router.get("/report")
 async def get_report():
     reports = report_list_serial(report.find())
@@ -79,5 +79,15 @@ async def post_report(rep: Report):
     }
 
 
+@router.post("/update_report")
+async def update_report(rep: Report, _id: str):
+    data = dict(rep)
+    data["updated_at"] = datetime.now()
+    result = report.update_one({"_id": ObjectId(_id)}, {"$set": data})
+    return {"code": 200 if result.modified_count > 0 else 204}
+
+
+
 
     
+
