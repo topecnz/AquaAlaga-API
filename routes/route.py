@@ -33,6 +33,27 @@ async def login_account(username: str, password: str):
         "data": data if result else {}
     }
 
+@router.post("/logout")
+async def logout():
+    return {
+        "message": "Logout successful!"
+    }
+    
+@router.post("/update_account")
+async def update_acc(id: str, acc: Account):
+    data = dict(acc)
+    data['updated_at'] = datetime.now()
+    result = account.update_one({"_id": ObjectId(id)}, {"$set": data})
+    
+    if result.matched_count == 1:
+        return {
+            "message": "Account updated successfully!"
+        }
+    else:
+        return {
+            "message": "Not found"
+        }
+
 @router.post("/account")
 async def post_account(acc: Account):
     data = dict(acc)
