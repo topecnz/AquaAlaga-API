@@ -62,6 +62,15 @@ async def post_schedule(sched: Schedule):
         "code": 200 if result else 204
     }
 
+@router.post("/update_schedule")
+async def update_schedule(sched: Schedule, _id: str):
+    data = dict(sched)
+    data["updated_at"] = datetime.now()
+    result = schedule.update_one({"_id": ObjectId(_id)}, {"$set": data})
+    return {
+        "code": 200 if result.modified_count > 0 else 204
+    }
+
 
 @router.get("/report")
 async def get_report():
@@ -79,14 +88,6 @@ async def post_report(rep: Report):
     }
 
 
-@router.post("/update_report")
-async def update_report(rep: Report, _id: str):
-    data = dict(rep)
-    data["updated_at"] = datetime.now()
-    result = report.update_one({"_id": ObjectId(_id)}, {"$set": data})
-    return {
-        "code": 200 if result.modified_count > 0 else 204
-    }
 
 
 
