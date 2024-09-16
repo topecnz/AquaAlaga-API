@@ -44,7 +44,7 @@ def notification_serial(notification) -> dict:
     }
 
 def notification_list_serial(notifications) -> list:
-    return [account_serial(notification) for notification in notifications]
+    return [notification_serial(notification) for notification in notifications]
 
 def report_serial(report) -> dict:
     return {
@@ -57,5 +57,3 @@ def report_serial(report) -> dict:
 def report_list_serial(reports) -> list:
     return [report_serial(report) for report in reports]
 
-def notification_list_serial(reports) -> list:
-    return [account_serial(report) for report in reports]

@@ -34,6 +34,27 @@ async def login_account(username: str, password: str):
         "data": data if result else {}
     }
 
+@router.post("/logout")
+async def logout():
+    return {
+        "message": "Logout successful!"
+    }
+    
+@router.post("/update_account")
+async def update_acc(id: str, acc: Account):
+    data = dict(acc)
+    data['updated_at'] = datetime.now()
+    result = account.update_one({"_id": ObjectId(id)}, {"$set": data})
+    
+    if result.matched_count == 1:
+        return {
+            "message": "Account updated successfully!"
+        }
+    else:
+        return {
+            "message": "Not found"
+        }
+
 @router.post("/account")
 async def post_account(acc: Account):
     data = dict(acc)
@@ -62,6 +83,7 @@ async def post_schedule(sched: Schedule):
         "code": 200 if result else 204
     }
 
+
 @router.post("/update_schedule")
 async def update_schedule(sched: Schedule, _id: str):
     data = dict(sched)
@@ -71,12 +93,10 @@ async def update_schedule(sched: Schedule, _id: str):
         "code": 200 if result.modified_count > 0 else 204
     }
 
-
 @router.get("/report")
 async def get_report():
     reports = report_list_serial(report.find())
     return reports
-
 
 @router.post("/report")
 async def post_report(rep: Report):
@@ -87,10 +107,16 @@ async def post_report(rep: Report):
         "code": 200 if result else 204
     }
 
+@router.get("/notification") 
+async def get_notification():
+    notifications = notification_list_serial(notification.find())
+    return notifications
 
-
-
-
-
-    
-
+@router.post("/notification")
+async def post_notification(notif: Notification):
+    data = dict(notif)
+    data['created_at'] = datetime.now()
+    result = notification.insert_one(data)
+    return {
+        "code": 200 if result else 204
+    }
