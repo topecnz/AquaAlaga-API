@@ -92,6 +92,19 @@ async def update_schedule(sched: Schedule, _id: str):
         "code": 200 if result.modified_count > 0 else 204
     }
 
+@router.delete("/delete_schedule")
+async def delete_schedule(_id: str):
+    result = schedule.delete_one({"_id": ObjectId(_id)})
+
+    if result.deleted_count == 1:
+        return {
+            "message": "Schedule deleted successfully!"
+        }
+    else:
+        return {
+            "message": "Schedule not found"
+        }
+    
 
 @router.get("/report")
 async def get_report():
