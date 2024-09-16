@@ -52,7 +52,6 @@ def report_serial(report) -> dict:
         "sensor": str(report['sensor']),
         "data": str(report['data']),
         "created_at": str(report['created_at']),
-        "updated_at": str(report['updated_at']),
     }
 
 def report_list_serial(reports) -> list:
