@@ -57,3 +57,14 @@ def report_serial(report) -> dict:
 def report_list_serial(reports) -> list:
     return [report_serial(report) for report in reports]
 
+
+def sensor_data_serial(sensor_data) -> dict:
+    return {
+        "id": str(sensor_data["_id"]),
+        "sensor": sensor_data["sensor"],
+        "data": sensor_data["data"],
+        "created_at": str(sensor_data["created_at"]),
+    }
+    
+def sensor_data_list_serial(sensor_data_list) -> list:
+    return [sensor_data_serial(data) for data in sensor_data_list]
