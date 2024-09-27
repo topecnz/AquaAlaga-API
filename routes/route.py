@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from models.account import Account
 from models.device import Device
 from models.notification import Notification
@@ -8,8 +9,13 @@ from config.database import *
 from schema.schemas import *
 from bson import ObjectId
 from datetime import datetime
+from pydantic import BaseModel
+from fastapi.encoders import jsonable_encoder
+import json
+
 
 router = APIRouter()
+connected_clients = []
 
 @router.get("/account")
 async def get_account():
@@ -109,3 +115,47 @@ async def post_notification(notif: Notification):
     return {
         "code": 200 if result else 204
     }
+
+@router.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    connected_clients.append(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        connected_clients.remove(websocket)
+        
+async def notify_clients(data: dict):
+    message = json.dumps(data, default=str)
+    for client in connected_clients:
+        await client.send_text(message)
+
+class SensorData(BaseModel):
+    sensor: str
+    data: str
+
+@router.post("/sensor_data")
+async def receive_sensor_data(sensor_data: SensorData):
+    data = sensor_data.model_dump()
+    data['created_at'] = datetime.now()
+    result = report.insert_one(data)
+    data["_id"] = str(result.inserted_id)
+    notif_message = f"New sensor data: {data['sensor']} is {data['data']}"
+    notification_data = {
+        "message": notif_message,
+        "created_at": datetime.now()
+    }
+    notification_result = notification.insert_one(notification_data)
+    notification_data["_id"] = str(notification_result.inserted_id)
+    await notify_clients(notification_data)
+    return {
+        "status": "Data received, notification sent!",
+        "data": data
+    }
+    
+@router.get("/sensor_data")
+async def get_sensor_data():
+    sensor_data = sensor_data_list_serial(report.find())
+    return sensor_data
+
