@@ -8,8 +8,14 @@ from config.database import *
 from schema.schemas import *
 from bson import ObjectId
 from datetime import datetime
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+
 
 router = APIRouter()
+app = FastAPI()
+
+connected_clients=[]
+
 
 @router.get("/account")
 async def get_account():
@@ -119,6 +125,66 @@ async def post_report(rep: Report):
         "code": 200 if result else 204
     }
 
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            await connection.send_text(message)
+
+
+manager = ConnectionManager()
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    connected_clients.append(websocket)
+
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        connected_clients.remove(websocket)
+
+
+@router.post("/sensor_data")
+async def post_sensor_data(rep: Report):
+    # insert sensor data
+    data = dict(rep)
+    data['created_at'] = datetime.now()
+    result = report.insert_one(data)
+
+    # insert notification data
+    if result:
+        notification_message = f"New message: {rep.sensor} - {rep.data}"
+        notification_data = {
+            "message": notification_message,
+            "created_at": datetime.now()
+        }
+        notification.insert_one(notification_data)
+
+        await manager.broadcast(notification_message)
+
+    return {
+        "code": 200 if result else 204
+    }
+
+@router.get("/sensor_data")
+async def get_sensor_data():
+    sensor_data = sensor_data_list_serial(report.find())
+    return sensor_data
+
+
 @router.get("/notification") 
 async def get_notification():
     notifications = notification_list_serial(notification.find())
@@ -132,3 +198,5 @@ async def post_notification(notif: Notification):
     return {
         "code": 200 if result else 204
     }
+
+
