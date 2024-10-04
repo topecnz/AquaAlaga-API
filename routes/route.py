@@ -1,4 +1,5 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, requests
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from models.account import Account
 from models.device import Device
 from models.notification import Notification
@@ -8,8 +9,17 @@ from config.database import *
 from schema.schemas import *
 from bson import ObjectId
 from datetime import datetime
+from pydantic import BaseModel
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import HTMLResponse
+from typing import List
+import logging
+import json
+import requests
+
 
 router = APIRouter()
+websocket_connections: List[WebSocket] = []
 
 @router.get("/account")
 async def get_account():
@@ -22,16 +32,17 @@ async def login_account(username: str, password: str):
     
     if result:
         data = {
-            "id": str(result["_id"]),
+            "id": str(result["_id"]), 
             "username": result["username"]
         }
         
         print(data)
+        return {"access": True, "data": data}
+    else:
+        print("No matching account found")
     
-    return {
-        "access": True if result else False,
-        "data": data if result else {}
-    }
+    return {"access": False, "data": {}}
+
 
 @router.post("/logout")
 async def logout():
@@ -132,3 +143,100 @@ async def post_notification(notif: Notification):
     return {
         "code": 200 if result else 204
     }
+
+@router.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    websocket_connections.append(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        websocket_connections.remove(websocket)
+        
+        
+async def notify_clients(data: dict):
+    message = json.dumps(data, default=str)
+    for client in websocket_connections:
+        await client.send_text(message)
+
+class SensorData(BaseModel):
+    sensor: str
+    data: str
+
+EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
+
+@router.post("/sensor_data")
+async def receive_sensor_data(sensor_data: SensorData):
+    data = sensor_data.model_dump()  
+    data['created_at'] = datetime.now()
+    report_result = report.insert_one(data)
+    data['_id'] = str(report_result.inserted_id)
+    
+    notif_message = f"New sensor data: {data['sensor']} is {data['data']}"
+
+    notification_data = {
+        "message": notif_message,
+        "created_at": datetime.now()
+    }
+    notification.insert_one(notification_data)
+    
+
+    tokens_cursor = notification.find({"expo_token": {"$exists": True}}, {"expo_token": 1, "_id": 0})
+    tokens = list(tokens_cursor)
+
+    if tokens:
+        for token in tokens:
+            if "expo_token" in token:
+                response = await send_push_notification(token["expo_token"], notif_message)
+                logging.info(f"Notification sent to {token['expo_token']}: {response}")
+    
+    for connection in websocket_connections:
+        try:
+            await connection.send_text(notif_message)
+        except WebSocketDisconnect:
+            websocket_connections.remove(connection)
+
+    return {"status": "Data received and notification sent", "data": jsonable_encoder(data)}
+
+
+async def send_push_notification(token, message):
+    payload = {
+        "to": token,
+        "sound": "default",
+        "title": "New Sensor Data",
+        "body": message,
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+    response = requests.post(EXPO_PUSH_URL, json=payload, headers=headers)
+    return response.json()
+    
+@router.get("/sensor_data")
+async def get_sensor_data():
+    sensor_data = sensor_data_list_serial(report.find())
+    return sensor_data
+
+class SensorData(BaseModel):
+    sensor: str
+    data: str
+
+class PushToken(BaseModel):
+    expo_token: str
+
+@router.post("/register_push_token")
+async def register_push_token(token: PushToken):
+    
+    try:
+        notification.update_one(
+            {"expo_token": token.expo_token},
+            {"$set": {"expo_token": token.expo_token, "created_at": datetime.now()}},
+            upsert=True
+        )
+        return {"message": "Token registered successfully!"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
