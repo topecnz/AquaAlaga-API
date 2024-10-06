@@ -72,38 +72,63 @@ async def get_schedule():
 
 @router.post("/schedule")
 async def post_schedule(sched: Schedule):
-    print('test')
     data = dict(sched)
     data['created_at'] = datetime.now()
     data['updated_at'] = datetime.now()
-    print(data)
+    
+    # Check if the time schedule is already existed.
+    is_existed = schedule.find_one({'time': data['time']}, {'_id': 0, 'time': 1})
+    if is_existed:
+        return {
+            "code": 409, # 409 means Conflict
+            "message": "Time Schedule already existed."
+        }    
+    
     result = schedule.insert_one(data)
     return {
         "code": 200 if result else 204
     }
 
+@router.put("/schedule")
+async def toggle_schedule(_id: str):
+    # get current id
+    data = schedule.find_one({'_id': ObjectId(_id)}, {'_id': 1, 'is_enable': 1})
+    data['is_enable'] = not data['is_enable']
+    data['updated_at'] = datetime.now()
+    
+    result = schedule.update_one({"_id": ObjectId(_id)}, {"$set": data})
+    return {
+        "code": 200 if result else 204
+    }
 
-@router.post("/update_schedule")
+@router.patch("/schedule")
 async def update_schedule(sched: Schedule, _id: str):
     data = dict(sched)
     data["updated_at"] = datetime.now()
+    
+    # Check if the time schedule is already existed before updating.
+    is_existed = schedule.find_one({'time': data['time']}, {'_id': 1, 'time': 1})
+    
+    if is_existed:
+        # if it is not the same ObjectId
+        if str(is_existed['_id']) != _id:
+            return {
+                "code": 409, # 409 means Conflict
+                "message": "Time Schedule already existed."
+            }
+    
     result = schedule.update_one({"_id": ObjectId(_id)}, {"$set": data})
     return {
-        "code": 200 if result.modified_count > 0 else 204
+        "code": 200 if result else 204
     }
 
-@router.delete("/delete_schedule")
+@router.delete("/schedule")
 async def delete_schedule(_id: str):
     result = schedule.delete_one({"_id": ObjectId(_id)})
 
-    if result.deleted_count == 1:
-        return {
-            "message": "Schedule deleted successfully!"
-        }
-    else:
-        return {
-            "message": "Schedule not found"
-        }
+    return {
+        "code": 200 if result else 204
+    }
 
 @router.get("/report")
 async def get_report():
