@@ -157,3 +157,56 @@ async def post_notification(notif: Notification):
     return {
         "code": 200 if result else 204
     }
+
+@router.get("/device")
+async def get_device():
+    devices = device_list_serial(device.find())
+    return devices
+
+@router.post("/device")
+async def post_device(dev: Device):
+    data = dict(dev)
+    data['created_at'] = datetime.now()
+    data['updated_at'] = datetime.now()
+    
+    # Check if the Device name is already existed.
+    is_existed = device.find_one({'name': data['name']}, {'_id': 0, 'name': 1})
+    if is_existed:
+        return {
+            "code": 409, # 409 means Conflict
+            "message": "Device name already existed."
+        }    
+    
+    result = device.insert_one(data)
+    return {
+        "code": 200 if result else 204
+    }
+
+@router.patch("/device")
+async def update_device(dev: Device, _id: str):
+    data = dict(dev)
+    data["updated_at"] = datetime.now()
+    
+    # Check if the Device name is already existed before updating.
+    is_existed = device.find_one({'name': data['name']}, {'_id': 1, 'name': 1})
+    
+    if is_existed:
+        # if it is not the same ObjectId
+        if str(is_existed['_id']) != _id:
+            return {
+                "code": 409, # 409 means Conflict
+                "message": "Device name already existed."
+            }
+    
+    result = device.update_one({"_id": ObjectId(_id)}, {"$set": data})
+    return {
+        "code": 200 if result else 204
+    }
+
+@router.delete("/device")
+async def delete_device(_id: str):
+    result = device.delete_one({"_id": ObjectId(_id)})
+
+    return {
+        "code": 200 if result else 204
+    }

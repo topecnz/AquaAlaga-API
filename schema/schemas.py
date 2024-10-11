@@ -57,3 +57,16 @@ def report_serial(report) -> dict:
 def report_list_serial(reports) -> list:
     return [report_serial(report) for report in reports]
 
+def device_serial(device) -> dict:
+    return {
+        "id": str(device["_id"]),
+        "name": str(device['name']),
+        "type": str(device['type']),
+        "mac_address": str(device['mac_address']),
+        "ip_address": str(device['ip_address']),
+        "created_at": str(device['created_at']),
+        "updated_at": str(device['updated_at']),
+    }
+
+def device_list_serial(devices) -> list:
+    return [device_serial(device) for device in devices]
