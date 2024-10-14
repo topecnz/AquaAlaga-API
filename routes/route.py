@@ -179,7 +179,8 @@ async def post_device(dev: Device):
     
     result = device.insert_one(data)
     return {
-        "code": 200 if result else 204
+        "code": 200 if result else 204,
+        "id": str(result.inserted_id)
     }
 
 @router.patch("/device")

@@ -6,3 +6,4 @@ class Schedule(BaseModel):
     repeat: str
     timer: int
     is_enable: bool
+    device_id: str
