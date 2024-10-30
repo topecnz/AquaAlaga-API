@@ -66,8 +66,8 @@ async def post_account(acc: Account):
     }
 
 @router.get("/schedule")
-async def get_schedule():
-    schedules = schedule_list_serial(schedule.find())
+async def get_schedule(_id: str):
+    schedules = schedule_list_serial(schedule.find({'device_id': _id}))
     return schedules
 
 @router.post("/schedule")
@@ -131,8 +131,8 @@ async def delete_schedule(_id: str):
     }
 
 @router.get("/report")
-async def get_report():
-    reports = report_list_serial(report.find())
+async def get_report(_id: str):
+    reports = report_list_serial(report.find({"device_id": _id}))
     return reports
 
 @router.post("/report")
