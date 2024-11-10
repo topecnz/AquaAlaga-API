@@ -67,6 +67,9 @@ def device_serial(device) -> dict:
         "type": str(device['type']),
         "mac_address": str(device['mac_address']),
         "ip_address": str(device['ip_address']),
+        "fish_breed": str(device['fish_breed']),
+        "temperature": int(device['temperature']),
+        "ph_level": int(device['ph_level']),
         "created_at": str(device['created_at']),
         "updated_at": str(device['updated_at']),
     }
