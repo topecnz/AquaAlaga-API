@@ -8,6 +8,7 @@ from config.database import *
 from schema.schemas import *
 from bson import ObjectId
 from datetime import datetime
+import time
 
 router = APIRouter()
 
@@ -211,3 +212,8 @@ async def delete_device(_id: str):
     return {
         "code": 200 if result else 204
     }
+    
+@router.get("/synctime")
+async def sync_time():
+    return { "timestamp": int(time.time()) }
+    
