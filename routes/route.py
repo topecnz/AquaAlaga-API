@@ -146,8 +146,8 @@ async def post_report(rep: Report):
     }
 
 @router.get("/notification") 
-async def get_notification():
-    notifications = notification_list_serial(notification.find())
+async def get_notification(_id: str):
+    notifications = notification_list_serial(notification.find({"device_id": _id}))
     return notifications
 
 @router.post("/notification")
@@ -155,6 +155,14 @@ async def post_notification(notif: Notification):
     data = dict(notif)
     data['created_at'] = datetime.now()
     result = notification.insert_one(data)
+    return {
+        "code": 200 if result else 204
+    }
+    
+@router.delete("/notification") 
+async def get_notification(_id: str):
+    result = notification.delete_one({"device_id": _id})
+
     return {
         "code": 200 if result else 204
     }
