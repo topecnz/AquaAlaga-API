@@ -17,6 +17,7 @@ class ResetPassword(BaseModel):
     
 class ChangePassword(BaseModel):
     id: str
+    current_password: str
     password: str
     
 class UpdateAccount(BaseModel):
