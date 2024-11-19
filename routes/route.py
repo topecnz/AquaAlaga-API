@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from models.account import Account, UpdateAccount, ResetPassword, FirstSetup, SecurityAnswer
+from models.account import Account, UpdateAccount, ResetPassword, FirstSetup, SecurityAnswer, ChangePassword
 from models.device import Device
 from models.notification import Notification
 from models.report import Report
@@ -102,6 +102,17 @@ async def find_username(username: str):
     
 @router.put("/reset")
 async def reset_password(acc: ResetPassword):
+    data = dict(acc)
+    acc_id = data.pop('id')
+    data['updated_at'] = datetime.now()
+    
+    result = account.update_one({"_id": ObjectId(acc_id)}, {"$set": data})
+    return {
+        "code": 200 if result else 204
+    }
+    
+@router.put("/changepass")
+async def reset_password(acc: ChangePassword):
     data = dict(acc)
     acc_id = data.pop('id')
     data['updated_at'] = datetime.now()
