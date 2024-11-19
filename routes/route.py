@@ -114,7 +114,17 @@ async def reset_password(acc: ResetPassword):
 @router.put("/changepass")
 async def reset_password(acc: ChangePassword):
     data = dict(acc)
+    
     acc_id = data.pop('id')
+    
+    # Check if the current password matched
+    is_found = account.find_one({"_id": ObjectId(acc_id), "password": data['current_password']})
+    
+    if not is_found:
+        return {
+            "code": 204
+        }
+    
     data['updated_at'] = datetime.now()
     
     result = account.update_one({"_id": ObjectId(acc_id)}, {"$set": data})
