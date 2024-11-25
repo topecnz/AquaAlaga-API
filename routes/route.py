@@ -259,6 +259,12 @@ async def get_device():
     devices = device_list_serial(device.find())
     return devices
 
+@router.get("/find_device")
+async def find_device(_id: str):
+    res = device.find_one({"_id": ObjectId(_id)})
+    devices = device_serial(res) if res else {}
+    return devices
+
 @router.post("/device")
 async def post_device(dev: Device):
     data = dict(dev)
