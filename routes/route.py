@@ -7,7 +7,7 @@ from models.schedule import Schedule
 from config.database import *
 from schema.schemas import *
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, date
 import time
 
 router = APIRouter()
@@ -161,11 +161,12 @@ async def get_schedule(_id: str):
 @router.post("/schedule")
 async def post_schedule(sched: Schedule):
     data = dict(sched)
+    print(data)
     data['created_at'] = datetime.now()
     data['updated_at'] = datetime.now()
     
     # Check if the time schedule is already existed.
-    is_existed = schedule.find_one({'time': data['time']}, {'_id': 0, 'time': 1})
+    is_existed = schedule.find_one({'device_id': data['device_id'], 'time': data['time']}, {'_id': 0, 'time': 1})
     if is_existed:
         return {
             "code": 409, # 409 means Conflict
@@ -195,7 +196,7 @@ async def update_schedule(sched: Schedule, _id: str):
     data["updated_at"] = datetime.now()
     
     # Check if the time schedule is already existed before updating.
-    is_existed = schedule.find_one({'time': data['time']}, {'_id': 1, 'time': 1})
+    is_existed = schedule.find_one({'device_id': data['device_id'], 'time': data['time']}, {'_id': 1, 'time': 1})
     
     if is_existed:
         # if it is not the same ObjectId
@@ -227,9 +228,26 @@ async def get_report(_id: str):
 async def post_report(rep: Report):
     data = dict(rep)
     data['created_at'] = datetime.now()
-    result = report.insert_one(data)
+    result_t = report.insert_one({
+        "sensor": "Temperature",
+        "data": data['temperature'],
+        "device_id": data['id'],
+        "created_at": data['created_at']
+    })
+    result_f = report.insert_one({
+        "sensor": "Ultrasonic",
+        "data": data['feed'],
+        "device_id": data['id'],
+        "created_at": data['created_at']
+    })
+    result_p = report.insert_one({
+        "sensor": "pH",
+        "data": data['ph_level'],
+        "device_id": data['id'],
+        "created_at": data['created_at']
+    })
     return {
-        "code": 200 if result else 204
+        "code": 200 if result_t and result_f and result_p else 204
     }
 
 @router.get("/notification") 
@@ -317,4 +335,3 @@ async def delete_device(_id: str):
 @router.get("/synctime")
 async def sync_time():
     return { "timestamp": int(time.time()) }
-    
