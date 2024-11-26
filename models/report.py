@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 
 class Report(BaseModel):
-    sensor: str
-    data: str
-    device_id: str
+    id: str
+    temperature: float
+    feed: int
+    ph_level: float
