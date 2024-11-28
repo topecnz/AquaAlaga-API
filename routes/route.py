@@ -266,7 +266,7 @@ async def post_notification(notif: Notification):
     
 @router.delete("/notification") 
 async def get_notification(_id: str):
-    result = notification.delete_one({"device_id": _id})
+    result = notification.delete_many({"device_id": _id})
 
     return {
         "code": 200 if result else 204
