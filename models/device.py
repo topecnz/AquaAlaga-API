@@ -8,3 +8,4 @@ class Device(BaseModel):
     fish_breed: str
     temperature: int
     ph_level: int
+    account_id: str
