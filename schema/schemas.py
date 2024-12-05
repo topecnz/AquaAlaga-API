@@ -18,7 +18,8 @@ def device_serial(device) -> dict:
         "mac_address": str(device['mac_address']),
         "ip_ddress": str(device['ip_ddress']),
         "created_at": str(device['created_at']),
-        "updated_at": str(device['updated_at'])
+        "updated_at": str(device['updated_at']),
+        "account_id": str(device['account_id']),
     }
 
 def schedule_serial(schedule) -> dict:
