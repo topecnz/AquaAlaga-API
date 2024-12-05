@@ -274,7 +274,7 @@ async def get_notification(_id: str):
 
 @router.get("/device")
 async def get_device(_id: str):
-    devices = device_list_serial(device.find({"_id": ObjectId(_id)}))
+    devices = device_list_serial(device.find({"account_id": _id}))
     return devices
 
 @router.get("/find_device")
