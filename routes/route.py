@@ -1,14 +1,15 @@
 from fastapi import APIRouter
-from models.account import Account, UpdateAccount, ResetPassword, FirstSetup, SecurityAnswer, ChangePassword
+from models.account import Account, Verify, Reset, UpdateAccount, ResetPassword, Signup, SecurityAnswer, ChangePassword
 from models.device import Device
 from models.notification import Notification
 from models.report import Report
 from models.schedule import Schedule
+from config import smtp
 from config.database import *
 from schema.schemas import *
 from bson import ObjectId
 from datetime import datetime, date
-import time
+import time, random, bcrypt
 
 router = APIRouter()
 
@@ -19,42 +20,31 @@ async def get_account(_id: str):
 
 @router.get("/login")
 async def login_account(username: str, password: str):
-    result = account.find_one({"username": username, "password": password})
+    result = account.find_one({"username": username.lower()})
     
     if result:
-        data = {
-            "id": str(result["_id"]),
-            "username": result["username"],
-            "is_first_time": result['is_first_time']
-        }
-        
-        print(data)
+        user = account_password(result)
+        try:
+            matched = bcrypt.checkpw(password.encode('utf-8'), str(user['password']).encode("utf-8"))
+            if matched:
+                data = {
+                    "id": str(user["id"]),
+                    "username": username,
+                    "email": user['email'],
+                    "is_verified": user['is_verified']
+                }
+            
+                print(data)
+        except:
+            return {
+                "access": False,
+                "data": {}
+            }
     
     return {
-        "access": True if result else False,
-        "data": data if result else {}
+        "access": True if result and matched else False,
+        "data": data if result and matched else {}
     }
-
-# @router.post("/logout")
-# async def logout():
-#     return {
-#         "message": "Logout successful!"
-#     }
-    
-# @router.post("/update_account")
-# async def update_acc(id: str, acc: Account):
-#     data = dict(acc)
-#     data['updated_at'] = datetime.now()
-#     result = account.update_one({"_id": ObjectId(id)}, {"$set": data})
-    
-#     if result.matched_count == 1:
-#         return {
-#             "message": "Account updated successfully!"
-#         }
-#     else:
-#         return {
-#             "message": "Not found"
-#         }
 
 @router.post("/account")
 async def post_account(acc: Account):
@@ -68,41 +58,107 @@ async def post_account(acc: Account):
         "message": "success!"
     }
     
-@router.post("/first_setup")
-async def post_first_setup(acc: FirstSetup):
+@router.post("/signup")
+async def signup(acc: Signup):
     data = dict(acc)
-    acc_id = data.pop('id')
-    data['is_first_time'] = False
-    data['updated_at'] = datetime.now()
+    data['username'] = str(data['username']).lower()
+    data['email'] = str(data['email']).lower()
+    data['password'] = bcrypt.hashpw(str(data['password']).encode('utf-8'), bcrypt.gensalt()).decode("utf-8")
+
+    # check information
+    is_found = account_list_serial(account.find({"$or": [
+        {"username": data['username'], "is_verified": True},
+        {"email": data['email'], "is_verified": True}
+    ]}))
     
-    result = account.update_one({"_id": ObjectId(acc_id)}, {"$set": data})
+    if is_found:
+        return { "code": 409 }
+    
+    data['is_verified'] = False
+    data['created_at'] = datetime.now()
+    data['updated_at'] = datetime.now()
+    data['verification_code'] = random.randint(100000, 999999)
+    result = account.update_one({"$or": [
+        {"username": data['username'], "is_verified": False},
+        {"email": data['email'], "is_verified": False}
+        ]}, {"$set": data}, upsert=True)
+       
     return {
         "code": 200 if result else 204
     }
     
-@router.put("/account")
-async def put_account(acc: UpdateAccount):
-    data = dict(acc)
-    acc_id = data.pop('id')
-    data['updated_at'] = datetime.now()
+@router.get("/checker")
+async def checker():
+    return checker_list_serial(account.find({"is_verified": True}))
     
-    result = account.update_one({"_id": ObjectId(acc_id)}, {"$set": data})
+@router.get("/verify")
+async def get_verify(id: str):
+    userid = ObjectId(id)
+    user = account_serial(account.find_one({"_id": userid}))
+    result = None
+    
+    if user:
+        code = random.randint(100000, 999999) 
+        result = account.update_one({"_id": userid}, {"$set": { "verification_code": code }})
+        
+        # send email
+        await smtp.verification_code_email("AquaAlaga: Verification Code", [user['email']], code)
+    
+    return {
+        "code": 200 if user and result else 204
+    }
+    
+@router.post("/verify")
+async def post_verify(verify: Verify):
+    data = dict(verify)
+    result = account.find_one({"_id": ObjectId(data['id']), "verification_code": int(data['verification_code'])})
+    
+    if result:
+        account.update_one({"_id": ObjectId(data['id'])}, {"$set": { "is_verified": True }})
+    
     return {
         "code": 200 if result else 204
     }
-    
+
 @router.get("/find")
-async def find_username(username: str):
-    is_found = account.find_one({'username': username}, {'_id': 1})
+async def find_email(email: str):
+    is_found = account.find_one({'email': email.lower(), 'is_verified': True}, {'_id': 1})
     
     return {
         "code": 200 if is_found else 204,
         "id": str(is_found['_id']) if is_found else None
     }
     
+@router.get("/reset")
+async def get_reset(id: str):
+    userid = ObjectId(id)
+    user = account_serial(account.find_one({"_id": userid}))
+    result = None
+    
+    if user:
+        code = random.randint(100000, 999999) 
+        result = account.update_one({"_id": userid}, {"$set": { "reset_code": code }})
+        
+        # send email
+        await smtp.reset_code_email("AquaAlaga: Reset Code", [user['email']], code)
+    
+    return {
+        "code": 200 if user and result else 204
+    }
+    
+@router.post("/reset")
+async def post_verify(reset: Reset):
+    data = dict(reset)
+    result = account.find_one({"_id": ObjectId(data['id']), "reset_code": int(data['reset_code'])})
+    
+    return {
+        "code": 200 if result else 204
+    }
+    
 @router.put("/reset")
 async def reset_password(acc: ResetPassword):
     data = dict(acc)
+    data['password'] = bcrypt.hashpw(str(data['password']).encode('utf-8'), bcrypt.gensalt()).decode("utf-8")
     acc_id = data.pop('id')
     data['updated_at'] = datetime.now()
     
@@ -116,41 +172,29 @@ async def reset_password(acc: ChangePassword):
     data = dict(acc)
     
     acc_id = data.pop('id')
+    current_password:str = data.pop('current_password')
     
     # Check if the current password matched
-    is_found = account.find_one({"_id": ObjectId(acc_id), "password": data['current_password']})
+    is_found = account.find_one({"_id": ObjectId(acc_id)})
     
-    if not is_found:
-        return {
-            "code": 204
-        }
-    
-    data['updated_at'] = datetime.now()
-    
-    result = account.update_one({"_id": ObjectId(acc_id)}, {"$set": data})
+    if is_found:
+        user = account_password(is_found)
+        try:
+            matched = bcrypt.checkpw(current_password.encode('utf-8'), str(user['password']).encode("utf-8"))
+            if matched:
+                data['password'] = bcrypt.hashpw(str(data['password']).encode('utf-8'), bcrypt.gensalt()).decode("utf-8")
+                data['updated_at'] = datetime.now()
+                
+                result = account.update_one({"_id": ObjectId(acc_id)}, {"$set": data})
+            
+            return {
+                "code": 200 if result and matched else 204
+            }
+        except:
+            pass
+        
     return {
-        "code": 200 if result else 204
-    }
-
-@router.get("/security")
-async def security_question(_id: str):
-    
-    is_found = account.find_one({"_id": ObjectId(_id)})
-    
-    return {
-        "code": 200 if is_found else 204,
-        "security_question": is_found['security_question'] if is_found else None
-    }
-
-@router.post("/securityanswer")
-async def security_answer(sec: SecurityAnswer):
-    data = dict(sec)
-    acc_id = data.pop('id')
-    
-    is_found = account.find_one({"_id": ObjectId(acc_id), "security_answer": data["security_answer"]})
-    
-    return {
-        "code": 200 if is_found else 204,
+        "code": 204
     }
 
 @router.get("/schedule")
