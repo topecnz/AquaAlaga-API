@@ -5,11 +5,18 @@ class Account(BaseModel):
     username: str
     password: str
     
-class FirstSetup(BaseModel):
-    id: str
+class Signup(BaseModel):
+    username: str
     password: str
-    security_question: str
-    security_answer: str
+    email: str
+    
+class Verify(BaseModel):
+    id: str
+    verification_code: int
+
+class Reset(BaseModel):
+    id: str
+    reset_code: int
     
 class ResetPassword(BaseModel):
     id: str

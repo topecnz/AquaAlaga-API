@@ -2,13 +2,31 @@ def account_serial(account) -> dict:
     return {
         "id": str(account["_id"]),
         "username": str(account["username"]),
-        "password": str(account["password"]),
+        "email": str(account["email"]),
+        "is_verified": bool(account["is_verified"]),
         "created_at": str(account["created_at"]),
         "updated_at": str(account["created_at"]),
+    }
+    
+def account_password(account) -> dict:
+    return {
+        "id": str(account["_id"]),
+        "email": str(account["email"]),
+        "password": str(account["password"]),
+        "is_verified": bool(account["is_verified"])
     }
 
 def account_list_serial(accounts) -> list:
     return [account_serial(account) for account in accounts]
+
+def checker_serial(account) -> dict:
+    return {
+        "username": str(account['username']),
+        "email": str(account['email'])
+    }
+
+def checker_list_serial(accounts) -> list:
+    return [checker_serial(account) for account in accounts]
 
 def device_serial(device) -> dict:
     return {
