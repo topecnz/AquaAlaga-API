@@ -27,6 +27,10 @@ class ChangePassword(BaseModel):
     current_password: str
     password: str
     
+class ChangeEmail(BaseModel):
+    id: str
+    email: str
+    
 class UpdateAccount(BaseModel):
     id: str
     password: str
