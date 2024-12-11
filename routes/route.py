@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from models.account import Account, Verify, Reset, UpdateAccount, ResetPassword, Signup, SecurityAnswer, ChangePassword
+from models.account import Account, Verify, Reset, ChangeEmail, ResetPassword, Signup, SecurityAnswer, ChangePassword
 from models.device import Device
 from models.notification import Notification
 from models.report import Report
@@ -45,17 +45,13 @@ async def login_account(username: str, password: str):
         "access": True if result and matched else False,
         "data": data if result and matched else {}
     }
+    
+@router.delete("/delete")
+async def delete_account(_id: str):
+    result = account.delete_one({"_id": ObjectId(_id)})
 
-@router.post("/account")
-async def post_account(acc: Account):
-    data = dict(acc)
-    data['is_first_time'] = True
-    data['created_at'] = datetime.now()
-    data['updated_at'] = datetime.now()
-    print(data)
-    account.insert_one(data)
     return {
-        "message": "success!"
+        "code": 200 if result else 204
     }
     
 @router.post("/signup")
@@ -127,6 +123,15 @@ async def find_email(email: str):
     return {
         "code": 200 if is_found else 204,
         "id": str(is_found['_id']) if is_found else None
+    }
+    
+@router.post("/emailchange")
+async def change_email(email: ChangeEmail):
+    data = dict(email)
+    result = account.update_one({'_id': ObjectId(data['id'])},{"$set": {'email': str(data['email']).lower()}})
+    
+    return {
+        "code": 200 if result else 204,
     }
     
 @router.get("/reset")
