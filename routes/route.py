@@ -128,7 +128,9 @@ async def find_email(email: str):
 @router.post("/emailchange")
 async def change_email(email: ChangeEmail):
     data = dict(email)
-    result = account.update_one({'_id': ObjectId(data['id'])},{"$set": {'email': str(data['email']).lower()}})
+    is_found = account.find_one({'email': str(data['email']).lower(), 'is_verified': True}, {'_id': 1})
+    
+    result = account.update_one({'_id': ObjectId(data['id'])},{"$set": {'email': str(data['email']).lower(), 'is_verified': False}}) if not is_found else None
     
     return {
         "code": 200 if result else 204,
