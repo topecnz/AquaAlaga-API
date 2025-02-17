@@ -1,10 +1,9 @@
-# AquaAlaga Raspberry Pi
+# AquaAlaga API
 
 ## Pre-requisite
 
 - Python 3.11
 - MongoDB
-- Raspberry Pi Zero 2W
 
 ## Installation
 
